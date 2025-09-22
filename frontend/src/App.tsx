@@ -37,9 +37,9 @@ function App() {
               path="/dashboard"
               element={
                 <ViewerRoute>
-                  <Layout>
+                  
                     <Dashboard />
-                  </Layout>
+                  
                 </ViewerRoute>
               }
             />
