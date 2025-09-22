@@ -2,9 +2,13 @@
 
 import React, { useEffect, useState } from 'react';
 import { dashboardService } from '../services/dashboard';
+import { productsService } from '../services/products';
+import { suppliersService } from '../services/suppliers';
 import { StockLevelChart } from '../components/charts/StockLevelChart';
 import { TransactionTrendsChart } from '../components/charts/TransactionTrendsChart';
-import type { DashboardStats, Product, Transaction, ChartData } from '../types';
+import { FormModal } from '../components/ui/Modal';
+import { Form } from '../components/ui/Form';
+import type { DashboardStats, Product, Transaction, ChartData, Supplier } from '../types';
 
 function DashboardContent() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -15,39 +19,187 @@ function DashboardContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setIsLoading(true);
-        const [
-          statsData,
-          lowStockData,
-          recentTransactionsData,
-          stockLevelChartData,
-          transactionTrendsChartData
-        ] = await Promise.all([
-          dashboardService.getStats(),
-          dashboardService.getLowStockProducts(),
-          dashboardService.getRecentTransactions(5),
-          dashboardService.getStockLevelsChartData(),
-          dashboardService.getTransactionTrendsChartData(7)
-        ]);
+  // Add Product Modal state
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-        setStats(statsData);
-        setLowStockProducts(lowStockData);
-        setRecentTransactions(recentTransactionsData);
-        setStockLevelData(stockLevelChartData);
-        setTransactionTrendsData(transactionTrendsChartData);
-      } catch (err) {
-        console.error('Error fetching dashboard data:', err);
-        setError('Failed to load dashboard data');
-      } finally {
-        setIsLoading(false);
+  const fetchDashboardData = async () => {
+    try {
+      setIsLoading(true);
+      const [
+        statsData,
+        lowStockData,
+        recentTransactionsData,
+        stockLevelChartData,
+        transactionTrendsChartData
+      ] = await Promise.all([
+        dashboardService.getStats(),
+        dashboardService.getLowStockProducts(),
+        dashboardService.getRecentTransactions(5),
+        dashboardService.getStockLevelsChartData(),
+        dashboardService.getTransactionTrendsChartData(7)
+      ]);
+
+      setStats(statsData);
+      setLowStockProducts(lowStockData);
+      setRecentTransactions(recentTransactionsData);
+      setStockLevelData(stockLevelChartData);
+      setTransactionTrendsData(transactionTrendsChartData);
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+      setError('Failed to load dashboard data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  // Fetch suppliers for the dropdown
+  useEffect(() => {
+    const fetchSuppliers = async () => {
+      try {
+        const suppliersData = await suppliersService.getSuppliers({ per_page: 100 });
+        setSuppliers(suppliersData.items || []);
+      } catch (error) {
+        console.error('Error fetching suppliers:', error);
       }
     };
 
-    fetchDashboardData();
-  }, []);
+    if (showAddProductModal) {
+      fetchSuppliers();
+    }
+  }, [showAddProductModal]);
+
+  // Handle form submission
+  const handleAddProduct = async (formData: Record<string, any>) => {
+    try {
+      setIsSubmitting(true);
+      setSubmitError(null);
+
+      // Prepare product data
+      const productData = {
+        name: formData.name,
+        description: formData.description,
+        unit_price: formData.unit_price,
+        current_stock: formData.current_stock,
+        min_stock_level: formData.min_stock_level || 0,
+        category: formData.category || '',
+        sku: formData.sku || '',
+        status: 'active' as const,
+        supplier_id: formData.supplier_id || null,
+      };
+
+      // Create the product
+      await productsService.createProduct(productData);
+
+      // Close modal and refresh dashboard data
+      setShowAddProductModal(false);
+      await fetchDashboardData();
+
+      // Show success message (you could add a toast notification here)
+      console.log('Product added successfully');
+    } catch (error) {
+      console.error('Error adding product:', error);
+      setSubmitError(error instanceof Error ? error.message : 'Failed to add product');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle modal close
+  const handleCloseModal = () => {
+    setShowAddProductModal(false);
+    setSubmitError(null);
+  };
+
+  // Form fields configuration
+  const productFormFields = [
+    {
+      name: 'name',
+      label: 'Product Name',
+      type: 'text' as const,
+      required: true,
+      placeholder: 'Enter product name',
+      validation: {
+        min: 2,
+        max: 100,
+        message: 'Product name must be between 2 and 100 characters'
+      }
+    },
+    {
+      name: 'description',
+      label: 'Description',
+      type: 'textarea' as const,
+      required: false,
+      placeholder: 'Enter product description',
+    },
+    {
+      name: 'sku',
+      label: 'SKU',
+      type: 'text' as const,
+      required: false,
+      placeholder: 'Enter SKU (optional)',
+    },
+    {
+      name: 'category',
+      label: 'Category',
+      type: 'text' as const,
+      required: false,
+      placeholder: 'Enter product category',
+    },
+    {
+      name: 'unit_price',
+      label: 'Unit Price',
+      type: 'number' as const,
+      required: true,
+      placeholder: '0.00',
+      validation: {
+        min: 0.01,
+        max: 999999.99,
+        message: 'Unit price must be greater than 0'
+      }
+    },
+    {
+      name: 'current_stock',
+      label: 'Current Stock',
+      type: 'number' as const,
+      required: true,
+      placeholder: '0',
+      validation: {
+        min: 0,
+        max: 999999,
+        message: 'Current stock must be 0 or greater'
+      }
+    },
+    {
+      name: 'min_stock_level',
+      label: 'Minimum Stock Level',
+      type: 'number' as const,
+      required: false,
+      placeholder: '0',
+      validation: {
+        min: 0,
+        max: 999999,
+        message: 'Minimum stock level must be 0 or greater'
+      }
+    },
+    {
+      name: 'supplier_id',
+      label: 'Supplier',
+      type: 'select' as const,
+      required: false,
+      placeholder: 'Select a supplier (optional)',
+      options: suppliers.map(supplier => ({
+        value: supplier.id,
+        label: supplier.name
+      }))
+    }
+  ];
 
   if (isLoading) {
     return (
@@ -237,7 +389,10 @@ function DashboardContent() {
         </div>
         <div className="p-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <button className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors">
+            <button
+              onClick={() => setShowAddProductModal(true)}
+              className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+            >
               <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
@@ -335,6 +490,33 @@ function DashboardContent() {
           </div>
         </div>
       </div>
+
+      {/* Add Product Modal */}
+      <FormModal
+        isOpen={showAddProductModal}
+        onClose={handleCloseModal}
+        title="Add New Product"
+        onSubmit={handleAddProduct}
+        submitText="Add Product"
+        cancelText="Cancel"
+        loading={isSubmitting}
+        size="lg"
+      >
+        {submitError && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-sm text-red-800">{submitError}</p>
+          </div>
+        )}
+
+        <Form
+          fields={productFormFields}
+          onSubmit={handleAddProduct}
+          loading={isSubmitting}
+          submitText="Add Product"
+          layout="grid"
+          columns={2}
+        />
+      </FormModal>
     </div>
   );
 }
