@@ -133,11 +133,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Sidebar - Only render once */}
       <div
         className={`
-          ${isOpen || isDesktop
-            ? 'fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out translate-x-0'
-            : 'fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out -translate-x-full'
+          ${isDesktop
+            ? 'sticky top-0 h-screen w-64 bg-white shadow-lg z-40'
+            : isOpen
+              ? 'fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out translate-x-0'
+              : 'fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out -translate-x-full'
           }
-          ${isDesktop ? 'md:relative md:translate-x-0 md:sticky md:top-0 md:h-screen' : ''}
         `}
         style={{ display: 'block' }}
         key="main-sidebar"

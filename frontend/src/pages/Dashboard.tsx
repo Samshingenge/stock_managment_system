@@ -25,6 +25,17 @@ function DashboardContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  // Stock In Modal state
+  const [showStockInModal, setShowStockInModal] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isStockInSubmitting, setIsStockInSubmitting] = useState(false);
+  const [stockInError, setStockInError] = useState<string | null>(null);
+
+  // Stock Out Modal state
+  const [showStockOutModal, setShowStockOutModal] = useState(false);
+  const [isStockOutSubmitting, setIsStockOutSubmitting] = useState(false);
+  const [stockOutError, setStockOutError] = useState<string | null>(null);
+
   const fetchDashboardData = async () => {
     try {
       setIsLoading(true);
@@ -75,6 +86,38 @@ function DashboardContent() {
     }
   }, [showAddProductModal]);
 
+  // Fetch products for the Stock In dropdown
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const productsData = await productsService.getProducts({ per_page: 1000 });
+        setProducts(productsData.items || []);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      }
+    };
+
+    if (showStockInModal) {
+      fetchProducts();
+    }
+  }, [showStockInModal]);
+
+  // Fetch products for the Stock Out dropdown
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const productsData = await productsService.getProducts({ per_page: 1000 });
+        setProducts(productsData.items || []);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      }
+    };
+
+    if (showStockOutModal) {
+      fetchProducts();
+    }
+  }, [showStockOutModal]);
+
   // Handle form submission
   const handleAddProduct = async (formData: Record<string, any>) => {
     try {
@@ -116,6 +159,186 @@ function DashboardContent() {
     setShowAddProductModal(false);
     setSubmitError(null);
   };
+
+  // Handle Stock In modal close
+  const handleCloseStockInModal = () => {
+    setShowStockInModal(false);
+    setStockInError(null);
+  };
+
+  // Handle Stock Out modal close
+  const handleCloseStockOutModal = () => {
+    setShowStockOutModal(false);
+    setStockOutError(null);
+  };
+
+  // Handle Stock In form submission
+  const handleStockIn = async (formData: Record<string, any>) => {
+    try {
+      setIsStockInSubmitting(true);
+      setStockInError(null);
+
+      // Prepare stock in data
+      const stockInData = {
+        product_id: formData.product_id,
+        quantity: formData.quantity,
+        unit_price: formData.unit_price || 0,
+        supplier_id: formData.supplier_id || null,
+        notes: formData.notes || '',
+        transaction_type: 'stock_in' as const,
+      };
+
+      // Process stock in transaction
+      await productsService.updateProductStock(stockInData.product_id, formData.quantity, stockInData.notes);
+
+      // Close modal and refresh dashboard data
+      setShowStockInModal(false);
+      await fetchDashboardData();
+
+      console.log('Stock added successfully');
+    } catch (error) {
+      console.error('Error adding stock:', error);
+      setStockInError(error instanceof Error ? error.message : 'Failed to add stock');
+    } finally {
+      setIsStockInSubmitting(false);
+    }
+  };
+
+  // Handle Stock Out form submission
+  const handleStockOut = async (formData: Record<string, any>) => {
+    try {
+      setIsStockOutSubmitting(true);
+      setStockOutError(null);
+
+      // Prepare stock out data
+      const stockOutData = {
+        product_id: formData.product_id,
+        quantity: -Math.abs(formData.quantity), // Negative quantity for stock out
+        unit_price: formData.unit_price || 0,
+        notes: formData.reason || '',
+        transaction_type: 'stock_out' as const,
+      };
+
+      // Process stock out transaction
+      await productsService.updateProductStock(stockOutData.product_id, stockOutData.quantity, stockOutData.notes);
+
+      // Close modal and refresh dashboard data
+      setShowStockOutModal(false);
+      await fetchDashboardData();
+
+      console.log('Stock removed successfully');
+    } catch (error) {
+      console.error('Error removing stock:', error);
+      setStockOutError(error instanceof Error ? error.message : 'Failed to remove stock');
+    } finally {
+      setIsStockOutSubmitting(false);
+    }
+  };
+
+  // Stock Out form fields configuration
+  const stockOutFormFields = [
+    {
+      name: 'product_id',
+      label: 'Product',
+      type: 'select' as const,
+      required: true,
+      placeholder: 'Select a product',
+      options: products.map(product => ({
+        value: product.id,
+        label: `${product.name} (Current: ${product.current_stock})`
+      }))
+    },
+    {
+      name: 'quantity',
+      label: 'Quantity',
+      type: 'number' as const,
+      required: true,
+      placeholder: '0',
+      validation: {
+        min: 1,
+        max: 999999,
+        message: 'Quantity must be at least 1'
+      }
+    },
+    {
+      name: 'reason',
+      label: 'Reason',
+      type: 'select' as const,
+      required: true,
+      placeholder: 'Select a reason',
+      options: [
+        { value: 'sale', label: 'Sale' },
+        { value: 'damage', label: 'Damage/Loss' },
+        { value: 'return', label: 'Customer Return' },
+        { value: 'adjustment', label: 'Inventory Adjustment' },
+        { value: 'other', label: 'Other' }
+      ]
+    },
+    {
+      name: 'notes',
+      label: 'Additional Notes (Optional)',
+      type: 'textarea' as const,
+      required: false,
+      placeholder: 'Enter any additional details',
+    }
+  ];
+
+  // Stock In form fields configuration
+  const stockInFormFields = [
+    {
+      name: 'product_id',
+      label: 'Product',
+      type: 'select' as const,
+      required: true,
+      placeholder: 'Select a product',
+      options: products.map(product => ({
+        value: product.id,
+        label: `${product.name} (Current: ${product.current_stock})`
+      }))
+    },
+    {
+      name: 'quantity',
+      label: 'Quantity',
+      type: 'number' as const,
+      required: true,
+      placeholder: '0',
+      validation: {
+        min: 1,
+        max: 999999,
+        message: 'Quantity must be at least 1'
+      }
+    },
+    {
+      name: 'unit_price',
+      label: 'Unit Price (Optional)',
+      type: 'number' as const,
+      required: false,
+      placeholder: '0.00',
+      validation: {
+        min: 0,
+        max: 999999.99,
+        message: 'Unit price must be 0 or greater'
+      }
+    },
+    {
+      name: 'supplier_id',
+      label: 'Supplier (Optional)',
+      type: 'select' as const,
+      required: false,
+      placeholder: 'Select a supplier',
+      options: suppliers.map(supplier => ({
+        value: supplier.id,
+        label: supplier.name
+      }))
+    },
+    {
+      name: 'notes',
+      label: 'Notes (Optional)',
+      type: 'textarea' as const,
+      required: false,
+      placeholder: 'Enter any additional notes',
+    }
+  ];
 
   // Form fields configuration
   const productFormFields = [
@@ -398,13 +621,19 @@ function DashboardContent() {
               </svg>
               Add Product
             </button>
-            <button className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors">
+            <button
+              onClick={() => setShowStockInModal(true)}
+              className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 transition-colors"
+            >
               <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
               </svg>
               Stock In
             </button>
-            <button className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 transition-colors">
+            <button
+              onClick={() => setShowStockOutModal(true)}
+              className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 transition-colors"
+            >
               <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
@@ -517,8 +746,60 @@ function DashboardContent() {
           columns={2}
         />
       </FormModal>
-    </div>
-  );
+
+      {/* Stock In Modal */}
+      <FormModal
+        isOpen={showStockInModal}
+        onClose={handleCloseStockInModal}
+        title="Add Stock"
+        onSubmit={handleStockIn}
+        submitText="Add Stock"
+        cancelText="Cancel"
+        loading={isStockInSubmitting}
+        size="md"
+      >
+        {stockInError && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-sm text-red-800">{stockInError}</p>
+          </div>
+        )}
+
+        <Form
+           fields={stockInFormFields}
+           onSubmit={handleStockIn}
+           loading={isStockInSubmitting}
+           submitText="Add Stock"
+           layout="vertical"
+         />
+       </FormModal>
+
+       {/* Stock Out Modal */}
+       <FormModal
+         isOpen={showStockOutModal}
+         onClose={handleCloseStockOutModal}
+         title="Stock Out"
+         onSubmit={handleStockOut}
+         submitText="Stock Out"
+         cancelText="Cancel"
+         loading={isStockOutSubmitting}
+         size="md"
+       >
+         {stockOutError && (
+           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+             <p className="text-sm text-red-800">{stockOutError}</p>
+           </div>
+         )}
+
+         <Form
+           fields={stockOutFormFields}
+           onSubmit={handleStockOut}
+           loading={isStockOutSubmitting}
+           submitText="Stock Out"
+           layout="vertical"
+         />
+       </FormModal>
+     </div>
+   );
 }
 
 export default function Dashboard() {

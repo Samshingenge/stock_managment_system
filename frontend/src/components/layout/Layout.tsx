@@ -367,13 +367,12 @@ function Sidebar({ isOpen, setIsOpen, onClose }: SidebarProps) {
       {/* Sidebar */}
       <div
         className={`
-          fixed top-0 bottom-0 left-0 z-20 w-64 bg-white shadow-lg border-r border-gray-200
-          transform transition-transform duration-300 ease-in-out
-          ${isOpen || window.innerWidth >= 768
-            ? 'translate-x-0'
-            : '-translate-x-full'
+          ${window.innerWidth >= 768
+            ? 'sticky top-16 h-[calc(100vh-4rem)] w-64 bg-white shadow-lg border-r border-gray-200 z-40'
+            : isOpen
+              ? 'fixed top-0 bottom-0 left-0 z-50 w-64 bg-white shadow-lg border-r border-gray-200 transform transition-transform duration-300 ease-in-out translate-x-0'
+              : 'fixed top-0 bottom-0 left-0 z-50 w-64 bg-white shadow-lg border-r border-gray-200 transform transition-transform duration-300 ease-in-out -translate-x-full'
           }
-          md:relative md:translate-x-0 md:z-10 md:shadow-none
         `}
         style={{ display: 'block' }}
         key="main-sidebar"
