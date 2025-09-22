@@ -1,6 +1,6 @@
 // Sidebar component for the Stock Management System
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   HomeIcon,
@@ -40,6 +40,7 @@ interface NavigationItem {
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const location = useLocation();
   const [isDesktop, setIsDesktop] = useState(false);
+  const [showProductsOverview, setShowProductsOverview] = useState(false);
 
   useEffect(() => {
     const checkScreenSize = () => {
@@ -51,6 +52,13 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
+
+  // Close products overview when navigating to different page
+  useEffect(() => {
+    if (showProductsOverview && !location.pathname.startsWith('/products')) {
+      setShowProductsOverview(false);
+    }
+  }, [location.pathname, showProductsOverview]);
 
   const navigation: NavigationItem[] = [
     {
@@ -65,7 +73,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       href: '/products',
       icon: CubeIcon,
       iconSolid: CubeIconSolid,
-      current: location.pathname.startsWith('/products'),
+      current: location.pathname.startsWith('/products') || showProductsOverview,
       badge: '12'
     },
     {
@@ -121,12 +129,41 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     }
   };
 
+  const handleProductsClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    console.log('Products button clicked, current state:', showProductsOverview);
+    setShowProductsOverview(!showProductsOverview);
+    handleNavClick();
+  };
+
+  // Update Products navigation item current state
+  const updatedNavigation = React.useMemo(() => {
+    return navigation.map(item => {
+      if (item.name === 'Products') {
+        const isCurrent = location.pathname.startsWith('/products') || showProductsOverview;
+        return {
+          ...item,
+          current: isCurrent
+        };
+      }
+      return item;
+    });
+  }, [location.pathname, showProductsOverview]);
+
+  const handleOverlayClick = () => {
+    if (showProductsOverview) {
+      setShowProductsOverview(false);
+    } else if (onClose) {
+      onClose();
+    }
+  };
+
   return (
     <>
       {/* Mobile sidebar overlay */}
-      {isOpen && (
+      {(isOpen || showProductsOverview) && (
         <div className="fixed inset-0 z-40 md:hidden">
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={onClose} />
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={handleOverlayClick} />
         </div>
       )}
 
@@ -152,8 +189,41 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 Main
               </h3>
               <div className="space-y-1">
-                {navigation.map((item) => {
+                {updatedNavigation.map((item) => {
                   const IconComponent = item.current ? item.iconSolid : item.icon;
+                  if (item.name === 'Products') {
+                    return (
+                      <button
+                        key={item.name}
+                        onClick={handleProductsClick}
+                        data-testid="products-button"
+                        type="button"
+                        className={`
+                          group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-150 w-full text-left
+                          ${item.current
+                            ? 'bg-blue-100 text-blue-900 border-r-2 border-blue-600'
+                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                          }
+                        `}
+                      >
+                        <IconComponent
+                          className={`
+                            mr-3 h-5 w-5 flex-shrink-0
+                            ${item.current ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-500'}
+                          `}
+                        />
+                        <span className="flex-1">{item.name}</span>
+                        {item.badge && (
+                          <span className={`
+                            inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none rounded-full
+                            ${item.current ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800'}
+                          `}>
+                            {item.badge}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  }
                   return (
                     <NavLink
                       key={item.name}
@@ -222,6 +292,58 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               </div>
             </div>
           </nav>
+
+          {/* Products Overview Panel */}
+          {showProductsOverview && (
+            <div className="px-4 pb-6">
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-semibold text-blue-900">Products Overview</h4>
+                  <button
+                    onClick={() => setShowProductsOverview(false)}
+                    className="text-blue-600 hover:text-blue-800"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-blue-700">Total Products</span>
+                    <span className="font-semibold text-blue-900">24</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-blue-700">Low Stock</span>
+                    <span className="font-semibold text-red-600">3</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-blue-700">Out of Stock</span>
+                    <span className="font-semibold text-red-600">1</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-blue-700">Categories</span>
+                    <span className="font-semibold text-blue-900">8</span>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-blue-200">
+                  <div className="space-y-2">
+                    <button className="w-full text-left px-2 py-1 text-xs text-blue-700 hover:bg-blue-100 rounded transition-colors">
+                      View All Products
+                    </button>
+                    <button className="w-full text-left px-2 py-1 text-xs text-blue-700 hover:bg-blue-100 rounded transition-colors">
+                      Add New Product
+                    </button>
+                    <button className="w-full text-left px-2 py-1 text-xs text-blue-700 hover:bg-blue-100 rounded transition-colors">
+                      Low Stock Alerts
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
         </div>
       </div>
