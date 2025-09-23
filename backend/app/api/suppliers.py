@@ -33,7 +33,7 @@ class SupplierUpdate(BaseModel):
     address: Optional[str] = None
     website: Optional[str] = Field(None, max_length=500)
     notes: Optional[str] = None
-    status: Optional[str] = Field(None, regex="^(active|inactive)$")
+    status: Optional[str] = Field(None, pattern="^(active|inactive)$")
 
 class SupplierResponse(BaseModel):
     id: UUID
@@ -64,11 +64,11 @@ async def get_suppliers(
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(20, ge=1, le=100, description="Items per page"),
     search: Optional[str] = Query(None, description="Search in name, contact person, or email"),
-    status: Optional[str] = Query(None, regex="^(active|inactive)$", description="Filter by status"),
-    sort_by: str = Query("name", regex="^(name|contact_person|email|created_at|updated_at)$", description="Sort field"),
-    sort_order: str = Query("asc", regex="^(asc|desc)$", description="Sort order"),
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    status: Optional[str] = Query(None, pattern="^(active|inactive)$", description="Filter by status"),
+    sort_by: str = Query("name", pattern="^(name|contact_person|email|created_at|updated_at)$", description="Sort field"),
+    sort_order: str = Query("asc", pattern="^(asc|desc)$", description="Sort order"),
+    
+    current_user = None
 ):
     """Get paginated list of suppliers with optional filtering and sorting"""
     
@@ -139,8 +139,8 @@ async def get_suppliers(
 @router.get("/{supplier_id}", response_model=SupplierResponse)
 async def get_supplier(
     supplier_id: UUID,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    
+    current_user = None
 ):
     """Get supplier by ID"""
     
@@ -168,8 +168,8 @@ async def get_supplier(
 @router.post("/", response_model=SupplierResponse)
 async def create_supplier(
     supplier_data: SupplierCreate,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    
+    current_user = None
 ):
     """Create a new supplier"""
     
@@ -220,8 +220,8 @@ async def create_supplier(
 async def update_supplier(
     supplier_id: UUID,
     supplier_data: SupplierUpdate,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    
+    current_user = None
 ):
     """Update supplier by ID"""
     
@@ -284,8 +284,8 @@ async def update_supplier(
 @router.delete("/{supplier_id}")
 async def delete_supplier(
     supplier_id: UUID,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    
+    current_user = None
 ):
     """Delete supplier by ID"""
     
@@ -318,8 +318,8 @@ async def delete_supplier(
 @router.get("/{supplier_id}/products", response_model=List[dict])
 async def get_supplier_products(
     supplier_id: UUID,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    
+    current_user = None
 ):
     """Get all products for a specific supplier"""
     

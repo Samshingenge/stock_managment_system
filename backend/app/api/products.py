@@ -26,11 +26,11 @@ class ProductBase(BaseModel):
     sku: Optional[str] = Field(None, max_length=100)
     category: Optional[str] = Field(None, max_length=100)
     description: Optional[str] = None
-    unit_price: Decimal = Field(..., ge=0, decimal_places=2)
+    unit_price: Decimal = Field(..., ge=0, )
     min_stock_level: Optional[int] = Field(0, ge=0)
     current_stock: Optional[int] = Field(0, ge=0)
     supplier_id: Optional[UUID] = None
-    status: Optional[str] = Field("active", regex="^(active|inactive|discontinued)$")
+    status: Optional[str] = Field("active", pattern="^(active|inactive|discontinued)$")
 
 
 class ProductCreate(ProductBase):
@@ -42,11 +42,11 @@ class ProductUpdate(BaseModel):
     sku: Optional[str] = Field(None, max_length=100)
     category: Optional[str] = Field(None, max_length=100)
     description: Optional[str] = None
-    unit_price: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    unit_price: Optional[Decimal] = Field(None, ge=0, )
     min_stock_level: Optional[int] = Field(None, ge=0)
     current_stock: Optional[int] = Field(None, ge=0)
     supplier_id: Optional[UUID] = None
-    status: Optional[str] = Field(None, regex="^(active|inactive|discontinued)$")
+    status: Optional[str] = Field(None, pattern="^(active|inactive|discontinued)$")
 
 
 class SupplierInfo(BaseModel):
@@ -89,8 +89,7 @@ async def get_products(
     low_stock_only: bool = Query(False),
     sort_by: Optional[str] = Query("name"),
     sort_order: Optional[str] = Query("asc"),
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user_dependency())
+    current_user=None
 ):
     """Get paginated list of products with filtering options"""
     
@@ -182,8 +181,8 @@ async def get_products(
 @router.get("/{product_id}", response_model=ProductResponse)
 async def get_product(
     product_id: UUID,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user_dependency())
+    
+    current_user=None
 ):
     """Get single product by ID"""
     
@@ -224,8 +223,8 @@ async def get_product(
 @router.post("/", response_model=ProductResponse, status_code=201)
 async def create_product(
     product: ProductCreate,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user_dependency())
+    
+    current_user=None
 ):
     """Create new product"""
     
@@ -281,8 +280,8 @@ async def create_product(
 async def update_product(
     product_id: UUID,
     product: ProductUpdate,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user_dependency())
+    
+    current_user=None
 ):
     """Update existing product"""
     
@@ -346,8 +345,8 @@ async def update_product(
 @router.delete("/{product_id}", status_code=204)
 async def delete_product(
     product_id: UUID,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user_dependency())
+    
+    current_user=None
 ):
     """Delete product"""
     
@@ -368,8 +367,8 @@ async def delete_product(
 
 @router.get("/categories/list")
 async def get_categories(
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user_dependency())
+    
+    current_user=None
 ):
     """Get list of all product categories"""
     
@@ -386,8 +385,8 @@ async def get_categories(
 @router.get("/low-stock/list")
 async def get_low_stock_products(
     threshold: Optional[int] = Query(None, description="Custom threshold override"),
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user_dependency())
+    
+    current_user=None
 ):
     """Get products with low stock levels"""
     

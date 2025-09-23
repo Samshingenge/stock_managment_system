@@ -9,6 +9,16 @@ from sqlalchemy.sql import func
 import uuid
 
 from app.database import Base
+from enum import Enum
+
+class TransactionType(str, Enum):
+    """Transaction types"""
+    IN = "in"
+    OUT = "out"
+    ADJUSTMENT = "adjustment"
+    RETURN = "return"
+    TRANSFER = "transfer"
+
 
 
 class StockTransaction(Base):

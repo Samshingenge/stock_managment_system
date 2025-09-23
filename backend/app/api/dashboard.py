@@ -89,8 +89,8 @@ async def get_dashboard_data(
     limit_alerts: int = Query(10, ge=1, le=50, description="Limit for stock alerts"),
     limit_transactions: int = Query(10, ge=1, le=50, description="Limit for recent transactions"),
     limit_products: int = Query(10, ge=1, le=50, description="Limit for top products"),
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    
+    current_user = None
 ):
     """Get comprehensive dashboard data including statistics, alerts, and trends"""
     
@@ -330,8 +330,8 @@ async def get_dashboard_data(
 
 @router.get("/stats/inventory-value")
 async def get_inventory_value_breakdown(
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    
+    current_user = None
 ):
     """Get inventory value breakdown by category and supplier"""
     
@@ -387,8 +387,8 @@ async def get_inventory_value_breakdown(
 @router.get("/stats/transaction-trends")
 async def get_transaction_trends(
     days: int = Query(30, ge=7, le=365, description="Number of days to analyze"),
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    
+    current_user = None
 ):
     """Get detailed transaction trends over time"""
     

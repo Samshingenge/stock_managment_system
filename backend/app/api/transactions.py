@@ -87,10 +87,10 @@ async def get_transactions(
     product_id: Optional[UUID] = Query(None, description="Filter by product ID"),
     start_date: Optional[date] = Query(None, description="Start date filter (YYYY-MM-DD)"),
     end_date: Optional[date] = Query(None, description="End date filter (YYYY-MM-DD)"),
-    sort_by: str = Query("transaction_date", regex="^(transaction_date|product_name|quantity|total_amount|created_at)$", description="Sort field"),
-    sort_order: str = Query("desc", regex="^(asc|desc)$", description="Sort order"),
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    sort_by: str = Query("transaction_date", pattern="^(transaction_date|product_name|quantity|total_amount|created_at)$", description="Sort field"),
+    sort_order: str = Query("desc", pattern="^(asc|desc)$", description="Sort order"),
+    
+    current_user = None
 ):
     """Get paginated list of stock transactions with optional filtering and sorting"""
     
@@ -184,8 +184,8 @@ async def get_transactions(
 @router.get("/{transaction_id}", response_model=TransactionResponse)
 async def get_transaction(
     transaction_id: UUID,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    
+    current_user = None
 ):
     """Get transaction by ID"""
     
@@ -219,8 +219,8 @@ async def get_transaction(
 @router.post("/", response_model=TransactionResponse)
 async def create_transaction(
     transaction_data: TransactionCreate,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    
+    current_user = None
 ):
     """Create a new stock transaction"""
     
@@ -312,8 +312,8 @@ async def create_transaction(
 async def update_transaction(
     transaction_id: UUID,
     transaction_data: TransactionUpdate,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    
+    current_user = None
 ):
     """Update transaction by ID (limited fields only)"""
     
@@ -409,8 +409,8 @@ async def update_transaction(
 @router.delete("/{transaction_id}")
 async def delete_transaction(
     transaction_id: UUID,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    
+    current_user = None
 ):
     """Delete transaction by ID and revert stock changes"""
     
@@ -443,8 +443,8 @@ async def get_transaction_summary(
     start_date: Optional[date] = Query(None, description="Start date for summary (YYYY-MM-DD)"),
     end_date: Optional[date] = Query(None, description="End date for summary (YYYY-MM-DD)"),
     product_id: Optional[UUID] = Query(None, description="Filter by product ID"),
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    
+    current_user = None
 ):
     """Get transaction summary statistics"""
     

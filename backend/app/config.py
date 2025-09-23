@@ -95,6 +95,8 @@ except Exception as e:
             self.ENVIRONMENT = 'development'
             self.DEFAULT_PAGE_SIZE = 20
             self.MAX_PAGE_SIZE = 100
+            self.LOG_LEVEL = 'INFO'  # Add missing LOG_LEVEL
+            self.SECURE_HEADERS = True  # Add missing SECURE_HEADERS
     settings = DefaultSettings()
 
 # Export commonly used settings
