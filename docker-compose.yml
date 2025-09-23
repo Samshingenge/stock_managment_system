@@ -31,6 +31,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: stock_management_api
+    env_file:
+      - .env
     environment:
       DATABASE_URL: postgresql://stockuser:stockpass123@postgres:5432/stock_management
       SECRET_KEY: dev-secret-key-change-in-production
@@ -48,23 +50,7 @@ services:
         condition: service_healthy
     networks:
       - stock_network
-    command: >
-      sh -c "
-        echo 'Waiting for database...' &&
-        python -c 'import time; import psycopg2; 
-        while True:
-          try: 
-            psycopg2.connect(host=\"postgres\", database=\"stock_management\", user=\"stockuser\", password=\"stockpass123\"); 
-            break
-          except psycopg2.OperationalError: 
-            time.sleep(1)' &&
-        echo 'Database ready!' &&
-        cd /app &&
-        python -m pip install --upgrade pip &&
-        pip install -r requirements.txt &&
-        alembic upgrade head &&
-        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-      "
+    command: sh /app/start.sh
 
   # React Frontend
   frontend:

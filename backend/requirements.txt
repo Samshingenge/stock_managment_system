@@ -25,8 +25,7 @@ pytest==7.4.3
 pytest-asyncio==0.21.1
 httpx==0.25.2
 
-# CORS support
-python-cors==1.0.1
+# CORS support (FastAPI has built-in CORS support)
 
 # Pagination
 fastapi-pagination==0.12.12

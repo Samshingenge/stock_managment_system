@@ -1,7 +1,8 @@
 """
 Product model for Stock Management System
 """
-from sqlalchemy import Column, String, Integer, Decimal, DateTime, ForeignKey, CheckConstraint, Text
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, CheckConstraint, Text
+from sqlalchemy.types import DECIMAL as Decimal
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship, column_property
 from sqlalchemy.sql import func
