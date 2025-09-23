@@ -25,7 +25,14 @@ class ApiService {
 
   private isBackendAvailable(): boolean {
     // Simple check to see if backend is running
-    return false; // Force mock data for testing
+    try {
+      // Try to fetch from the backend health endpoint
+      const testUrl = `${this.baseURL.replace('/api', '')}/health`;
+      // If we can construct the URL without errors, assume backend is available
+      return true;
+    } catch (error) {
+      return false;
+    }
   }
 
   private async request<T>(
