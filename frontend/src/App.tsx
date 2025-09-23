@@ -136,9 +136,9 @@ function App() {
               path="/settings"
               element={
                 <AdminRoute>
-                  <Layout>
+                  
                     <Settings />
-                  </Layout>
+                  
                 </AdminRoute>
               }
             />
@@ -147,9 +147,9 @@ function App() {
               path="/users"
               element={
                 <AdminRoute>
-                  <Layout>
+                  
                     <div>Users Management Page (Coming Soon)</div>
-                  </Layout>
+                  
                 </AdminRoute>
               }
             />

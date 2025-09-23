@@ -7,6 +7,7 @@ from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import StaticPool
 from typing import Generator
 import logging
+import os
 
 from app.config import settings
 
@@ -14,16 +15,39 @@ from app.config import settings
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Add detailed logging for debugging
+def log_environment_info():
+    """Log environment information for debugging"""
+    logger.info("=== ENVIRONMENT DEBUG INFO ===")
+    logger.info(f"DATABASE_URL from settings: {settings.DATABASE_URL}")
+    logger.info(f"DATABASE_URL from env: {os.getenv('DATABASE_URL', 'NOT SET')}")
+    logger.info(f"DB_HOST: {os.getenv('DB_HOST', 'NOT SET')}")
+    logger.info(f"DB_PORT: {os.getenv('DB_PORT', 'NOT SET')}")
+    logger.info(f"DB_NAME: {os.getenv('DB_NAME', 'NOT SET')}")
+    logger.info(f"DB_USER: {os.getenv('DB_USER', 'NOT SET')}")
+    logger.info(f"DB_PASSWORD: {'*' * len(os.getenv('DB_PASSWORD', '')) if os.getenv('DB_PASSWORD') else 'NOT SET'}")
+    logger.info(f"DEBUG mode: {settings.DEBUG}")
+    logger.info("=== END ENVIRONMENT DEBUG INFO ===")
+
+# Log environment info first
+log_environment_info()
+
 # Create SQLAlchemy engine
-engine = create_engine(
-    settings.DATABASE_URL,
-    # Connection pool settings
-    pool_size=20,
-    max_overflow=0,
-    pool_pre_ping=True,  # Verify connections before use
-    pool_recycle=300,    # Recycle connections every 5 minutes
-    echo=settings.DEBUG, # Log SQL queries in debug mode
-)
+logger.info(f"Creating database engine with URL: {settings.DATABASE_URL.replace(settings.DATABASE_URL.split('://')[1].split('@')[0], '***')}")
+try:
+    engine = create_engine(
+        settings.DATABASE_URL,
+        # Connection pool settings
+        pool_size=20,
+        max_overflow=0,
+        pool_pre_ping=True,  # Verify connections before use
+        pool_recycle=300,    # Recycle connections every 5 minutes
+        echo=settings.DEBUG, # Log SQL queries in debug mode
+    )
+    logger.info("Database engine created successfully")
+except Exception as e:
+    logger.error(f"Failed to create database engine: {e}")
+    raise
 
 # Create SessionLocal class
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -54,16 +78,23 @@ def init_db() -> None:
     """
     Initialize database tables
     """
+    logger.info("Starting database initialization...")
     try:
         # Import all models to register them with Base
+        logger.info("Importing models...")
         from app.models import product, supplier, transaction
-        
+        logger.info("Models imported successfully")
+
         # Create all tables
+        logger.info("Creating database tables...")
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables created successfully")
-        
+
     except Exception as e:
         logger.error(f"Error initializing database: {e}")
+        logger.error(f"Exception type: {type(e).__name__}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         raise
 
 

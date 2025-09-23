@@ -1,6 +1,7 @@
 // Products page for the Stock Management System
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { DataTable } from '../components/ui/DataTable';
 import { Modal, FormModal, ConfirmationModal } from '../components/ui/Modal';
 import { Form } from '../components/ui/Form';
@@ -20,10 +21,12 @@ interface ProductFormData {
 }
 
 function ProductsContent() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
+  const [filter, setFilter] = useState<'all' | 'low-stock'>('all');
 
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -220,8 +223,41 @@ function ProductsContent() {
     }
   };
 
+  // Filter products based on current filter
+  const filteredProducts = useMemo(() => {
+    if (filter === 'low-stock') {
+      return products.filter(product => product.current_stock <= product.min_stock_level);
+    }
+    return products;
+  }, [products, filter]);
+
   useEffect(() => {
     fetchProducts();
+  }, []);
+
+  // Handle query parameters
+  useEffect(() => {
+    const createParam = searchParams.get('create');
+    const filterParam = searchParams.get('filter');
+
+    if (createParam === 'true') {
+      setShowCreateModal(true);
+      // Clear the query parameter after opening modal
+      setSearchParams(new URLSearchParams());
+    }
+
+    if (filterParam === 'low-stock') {
+      setFilter('low-stock');
+      // Clear the query parameter after applying filter
+      setSearchParams(new URLSearchParams());
+    }
+  }, [searchParams, setSearchParams]);
+
+  // Reset filter when navigating away from products page
+  useEffect(() => {
+    if (!window.location.pathname.startsWith('/products')) {
+      setFilter('all');
+    }
   }, []);
 
   // Handle form submission
@@ -241,6 +277,9 @@ function ProductsContent() {
       setShowCreateModal(false);
       setShowEditModal(false);
       setEditingProduct(null);
+
+      // Refresh products count in sidebar
+      window.dispatchEvent(new CustomEvent('refreshProductsCount'));
       setFormData({
         name: '',
         sku: '',
@@ -297,6 +336,9 @@ function ProductsContent() {
       await fetchProducts();
       setShowDeleteModal(false);
       setDeletingProduct(null);
+
+      // Refresh products count in sidebar
+      window.dispatchEvent(new CustomEvent('refreshProductsCount'));
     } catch (err) {
       console.error('Error deleting product:', err);
     }
@@ -343,7 +385,7 @@ function ProductsContent() {
 
       {/* Products table */}
       <DataTable
-        data={products}
+        data={filteredProducts}
         columns={columns}
         loading={loading}
         searchable={true}
@@ -354,7 +396,11 @@ function ProductsContent() {
         onDelete={handleDelete}
         onSelect={setSelectedProducts}
         selectedRows={selectedProducts}
-        emptyMessage="No products found. Create your first product to get started."
+        emptyMessage={
+          filter === 'low-stock'
+            ? "No products with low stock found."
+            : "No products found. Create your first product to get started."
+        }
       />
 
       {/* Create Product Modal */}

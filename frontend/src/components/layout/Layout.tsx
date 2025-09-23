@@ -1,6 +1,7 @@
 // Main layout component for the Stock Management System
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   BellIcon,
   UserIcon,
@@ -295,7 +296,7 @@ const navigationItems = [
     name: 'Dashboard',
     href: '/dashboard',
     icon: HomeIcon,
-    current: true
+    current: false
   },
   {
     name: 'Products',
@@ -346,9 +347,67 @@ const systemItems = [
 ];
 
 function Sidebar({ isOpen, setIsOpen, onClose }: SidebarProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [transactionCount, setTransactionCount] = useState<number>(0);
+  const [supplierCount, setSupplierCount] = useState<number>(0);
+  const [isLoadingCount, setIsLoadingCount] = useState<boolean>(false);
+
+  // Fetch transaction count for badge
+  useEffect(() => {
+    const fetchTransactionCount = async () => {
+      try {
+        setIsLoadingCount(true);
+        const stats = await transactionsService.getTransactionStatistics();
+        setTransactionCount(stats.totalTransactions);
+      } catch (error) {
+        console.error('Error fetching transaction count:', error);
+        // Fallback to mock data count
+        setTransactionCount(2);
+      } finally {
+        setIsLoadingCount(false);
+      }
+    };
+
+    fetchTransactionCount();
+  }, []);
+
+  // Fetch supplier count for badge
+  useEffect(() => {
+    const fetchSupplierCount = async () => {
+      try {
+        const response = await suppliersService.getSuppliers({ per_page: 1000 });
+        setSupplierCount(response.total || 0);
+      } catch (error) {
+        console.error('Error fetching supplier count:', error);
+        // Fallback to mock data count
+        setSupplierCount(3);
+      }
+    };
+
+    fetchSupplierCount();
+  }, []);
+
+  // Update navigation items to reflect current route
+  const updatedNavigationItems = navigationItems.map(item => ({
+    ...item,
+    current: location.pathname === item.href,
+    badge: item.name === 'Transactions'
+      ? (isLoadingCount ? '...' : transactionCount.toString())
+      : item.name === 'Suppliers'
+        ? supplierCount.toString()
+        : item.badge
+  }));
+
+  const updatedSystemItems = systemItems.map(item => ({
+    ...item,
+    current: location.pathname === item.href
+  }));
+
   const handleNavClick = (href: string) => {
     // Handle navigation here
     console.log('Navigate to:', href);
+    navigate(href);
 
     // Close sidebar on mobile after navigation
     if (window.innerWidth < 768) {
@@ -395,7 +454,7 @@ function Sidebar({ isOpen, setIsOpen, onClose }: SidebarProps) {
             {/* Main Navigation */}
             <div className="px-3">
               <div className="space-y-1">
-                {navigationItems.map((item) => {
+                {updatedNavigationItems.map((item) => {
                   const Icon = item.icon;
                   return (
                     <button
@@ -403,24 +462,56 @@ function Sidebar({ isOpen, setIsOpen, onClose }: SidebarProps) {
                       onClick={() => handleNavClick(item.href)}
                       className={`
                         group flex items-center w-full px-2 py-2 text-sm font-medium rounded-md
+                        transition-all duration-200 ease-in-out transform hover:scale-[1.02]
                         ${item.current
-                          ? 'bg-blue-100 text-blue-700 border-r-2 border-blue-600'
-                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                          ? 'bg-blue-100 text-blue-700 border-r-2 border-blue-600 shadow-sm'
+                          : item.name === 'Transactions'
+                            ? 'text-gray-600 hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 hover:text-gray-900 hover:shadow-md hover:border-l-2 hover:border-green-400'
+                            : item.name === 'Suppliers'
+                              ? 'text-gray-600 hover:bg-gradient-to-r hover:from-purple-50 hover:to-violet-50 hover:text-gray-900 hover:shadow-md hover:border-l-2 hover:border-purple-400'
+                              : item.name === 'Reports'
+                                ? 'text-gray-600 hover:bg-gradient-to-r hover:from-orange-50 hover:to-amber-50 hover:text-gray-900 hover:shadow-md hover:border-l-2 hover:border-orange-400'
+                                : item.name === 'Analytics'
+                                  ? 'text-gray-600 hover:bg-gradient-to-r hover:from-cyan-50 hover:to-teal-50 hover:text-gray-900 hover:shadow-md hover:border-l-2 hover:border-cyan-400'
+                                  : 'text-gray-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:text-gray-900 hover:shadow-sm'
                         }
                       `}
                     >
                       <Icon
                         className={`
-                          mr-3 flex-shrink-0 h-5 w-5
+                          mr-3 flex-shrink-0 h-5 w-5 transition-all duration-200 ease-in-out
                           ${item.current
                             ? 'text-blue-500'
-                            : 'text-gray-400 group-hover:text-gray-500'
+                            : item.name === 'Transactions'
+                              ? 'text-gray-400 group-hover:text-green-500 group-hover:scale-110 group-hover:rotate-12'
+                              : item.name === 'Suppliers'
+                                ? 'text-gray-400 group-hover:text-purple-500 group-hover:scale-110 group-hover:-rotate-12'
+                                : item.name === 'Reports'
+                                  ? 'text-gray-400 group-hover:text-orange-500 group-hover:scale-110 group-hover:rotate-6'
+                                  : item.name === 'Analytics'
+                                    ? 'text-gray-400 group-hover:text-cyan-500 group-hover:scale-110 group-hover:-rotate-6'
+                                    : 'text-gray-400 group-hover:text-blue-500 group-hover:scale-110'
                           }
                         `}
                       />
                       <span className="flex-1 text-left">{item.name}</span>
                       {item.badge && (
-                        <span className="ml-3 inline-block py-0.5 px-2 text-xs font-medium rounded-full bg-gray-100 text-gray-600">
+                        <span className={`
+                          ml-3 inline-block py-0.5 px-2 text-xs font-medium rounded-full
+                          transition-all duration-200 ease-in-out
+                          ${item.current
+                            ? 'bg-blue-200 text-blue-800 animate-pulse'
+                            : item.name === 'Transactions'
+                              ? 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 hover:from-green-200 hover:to-emerald-200 shadow-sm'
+                              : item.name === 'Suppliers'
+                                ? 'bg-gradient-to-r from-purple-100 to-violet-100 text-purple-700 hover:from-purple-200 hover:to-violet-200 shadow-sm'
+                                : item.name === 'Reports'
+                                  ? 'bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 hover:from-orange-200 hover:to-amber-200 shadow-sm'
+                                  : item.name === 'Analytics'
+                                    ? 'bg-gradient-to-r from-cyan-100 to-teal-100 text-cyan-700 hover:from-cyan-200 hover:to-teal-200 shadow-sm'
+                                    : 'bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 hover:from-blue-200 hover:to-indigo-200'
+                          }
+                        `}>
                           {item.badge}
                         </span>
                       )}
@@ -438,7 +529,7 @@ function Sidebar({ isOpen, setIsOpen, onClose }: SidebarProps) {
                 </h3>
               </div>
               <div className="space-y-1">
-                {systemItems.map((item) => {
+                {updatedSystemItems.map((item) => {
                   const Icon = item.icon;
                   return (
                     <button
@@ -446,18 +537,23 @@ function Sidebar({ isOpen, setIsOpen, onClose }: SidebarProps) {
                       onClick={() => handleNavClick(item.href)}
                       className={`
                         group flex items-center w-full px-2 py-2 text-sm font-medium rounded-md
+                        transition-all duration-200 ease-in-out transform hover:scale-[1.02]
                         ${item.current
-                          ? 'bg-blue-100 text-blue-700 border-r-2 border-blue-600'
-                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                          ? 'bg-blue-100 text-blue-700 border-r-2 border-blue-600 shadow-sm'
+                          : item.name === 'Settings'
+                            ? 'text-gray-600 hover:bg-gradient-to-r hover:from-slate-50 hover:to-gray-50 hover:text-gray-900 hover:shadow-md hover:border-l-2 hover:border-slate-400'
+                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                         }
                       `}
                     >
                       <Icon
                         className={`
-                          mr-3 flex-shrink-0 h-5 w-5
+                          mr-3 flex-shrink-0 h-5 w-5 transition-all duration-200 ease-in-out
                           ${item.current
                             ? 'text-blue-500'
-                            : 'text-gray-400 group-hover:text-gray-500'
+                            : item.name === 'Settings'
+                              ? 'text-gray-400 group-hover:text-slate-500 group-hover:scale-110 group-hover:rotate-3'
+                              : 'text-gray-400 group-hover:text-gray-500'
                           }
                         `}
                       />

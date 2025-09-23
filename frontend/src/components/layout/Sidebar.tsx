@@ -1,7 +1,8 @@
 // Sidebar component for the Stock Management System
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { productsService } from '../../services/products';
 import {
   HomeIcon,
   CubeIcon,
@@ -39,8 +40,10 @@ interface NavigationItem {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const [isDesktop, setIsDesktop] = useState(false);
   const [showProductsOverview, setShowProductsOverview] = useState(false);
+  const [productsCount, setProductsCount] = useState<number | null>(null);
 
   useEffect(() => {
     const checkScreenSize = () => {
@@ -52,6 +55,55 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
+
+  // Fetch products count for badge
+  useEffect(() => {
+    const fetchProductsCount = async () => {
+      try {
+        const response = await productsService.getProducts({
+          per_page: 1,
+          sort_by: 'id',
+          sort_order: 'asc',
+        });
+        setProductsCount(response.total || 0);
+      } catch (err) {
+        console.error('Error fetching products count:', err);
+        setProductsCount(0);
+      }
+    };
+
+    fetchProductsCount();
+
+    // Set up interval to refresh count every 30 seconds
+    const interval = setInterval(fetchProductsCount, 30000);
+
+    // Listen for manual refresh events
+    const handleRefresh = () => fetchProductsCount();
+    window.addEventListener('refreshProductsCount', handleRefresh);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('refreshProductsCount', handleRefresh);
+    };
+  }, []);
+
+  // Function to refresh products count (can be called from other components)
+  const refreshProductsCount = () => {
+    const fetchProductsCount = async () => {
+      try {
+        const response = await productsService.getProducts({
+          per_page: 1,
+          sort_by: 'id',
+          sort_order: 'asc',
+        });
+        setProductsCount(response.total || 0);
+      } catch (err) {
+        console.error('Error fetching products count:', err);
+      }
+    };
+
+    fetchProductsCount();
+  };
 
   // Close products overview when navigating to different page
   useEffect(() => {
@@ -74,7 +126,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       icon: CubeIcon,
       iconSolid: CubeIconSolid,
       current: location.pathname.startsWith('/products') || showProductsOverview,
-      badge: '12'
+      badge: productsCount !== null ? productsCount.toString() : '0'
     },
     {
       name: 'Transactions',
@@ -132,7 +184,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const handleProductsClick = (e: React.MouseEvent) => {
     e.preventDefault();
     console.log('Products button clicked, current state:', showProductsOverview);
+
+    // Navigate to products page
+    navigate('/products');
+
+    // Toggle overview panel
     setShowProductsOverview(!showProductsOverview);
+
+    // Handle mobile navigation
     handleNavClick();
   };
 
@@ -312,7 +371,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-blue-700">Total Products</span>
-                    <span className="font-semibold text-blue-900">24</span>
+                    <span className="font-semibold text-blue-900">
+                      {productsCount !== null ? productsCount : '...'}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-blue-700">Low Stock</span>
@@ -330,13 +391,31 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
                 <div className="mt-4 pt-3 border-t border-blue-200">
                   <div className="space-y-2">
-                    <button className="w-full text-left px-2 py-1 text-xs text-blue-700 hover:bg-blue-100 rounded transition-colors">
+                    <button
+                      onClick={() => {
+                        // Already navigated by main Products button, just close panel
+                        setShowProductsOverview(false);
+                      }}
+                      className="w-full text-left px-2 py-1 text-xs text-blue-700 hover:bg-blue-100 rounded transition-colors"
+                    >
                       View All Products
                     </button>
-                    <button className="w-full text-left px-2 py-1 text-xs text-blue-700 hover:bg-blue-100 rounded transition-colors">
+                    <button
+                      onClick={() => {
+                        navigate('/products?create=true');
+                        setShowProductsOverview(false);
+                      }}
+                      className="w-full text-left px-2 py-1 text-xs text-blue-700 hover:bg-blue-100 rounded transition-colors"
+                    >
                       Add New Product
                     </button>
-                    <button className="w-full text-left px-2 py-1 text-xs text-blue-700 hover:bg-blue-100 rounded transition-colors">
+                    <button
+                      onClick={() => {
+                        navigate('/products?filter=low-stock');
+                        setShowProductsOverview(false);
+                      }}
+                      className="w-full text-left px-2 py-1 text-xs text-blue-700 hover:bg-blue-100 rounded transition-colors"
+                    >
                       Low Stock Alerts
                     </button>
                   </div>
